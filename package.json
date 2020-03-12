@@ -1,0 +1,25 @@
+{
+  "name": "harbergerstax",
+  "version": "1.0.0",
+  "description": "A simulation of Harbergers Tax in context of a blockchain utilizing some form of computational complexity for verification. The Harbergers Tax aims to incentivize mining pools to decentralize their computational power.",
+  "main": "src/index.ts",
+  "scripts": {
+    "compile": "tsc",
+    "run": "node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hans-m-song/hargergerstax.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hans-m-song/hargergerstax/issues"
+  },
+  "homepage": "https://github.com/hans-m-song/hargergerstax#readme",
+  "devDependencies": {
+    "typescript": "^3.8.3"
+  }
+}
