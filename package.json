@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/hans-m-song/hargergerstax#readme",
   "devDependencies": {
+    "@types/node": "^13.9.1",
     "typescript": "^3.8.3"
   }
 }
