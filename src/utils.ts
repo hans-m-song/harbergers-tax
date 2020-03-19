@@ -3,5 +3,3 @@ export const random = (floor: number, ceil: number) =>
 
 export const randomFloat = (floor: number, ceil: number) =>
   Math.random() * (ceil - floor) + floor;
-
-console.log(randomFloat(-4, 1));

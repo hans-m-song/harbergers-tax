@@ -1,10 +1,12 @@
-import {BlockChain, Pool, Participant, generateParticipants} from './entities';
-import {auction, chunkPayout, taxCollection} from './actions';
+import {generateParticipants} from './entities';
+import {auction, taxCollection, blockPayout} from './actions';
 import * as params from './parameters';
 
 const participants = generateParticipants(params.PARTICIPANT_COUNT);
 
-const blockInterval = setInterval(() => {}, params.BLOCK_INTERVAL * 1000);
+const blockInterval = setInterval(() => {
+  blockPayout(participants);
+}, params.BLOCK_INTERVAL * 1000);
 
 const tradeInterval = setInterval(() => {
   participants.forEach(taxCollection);

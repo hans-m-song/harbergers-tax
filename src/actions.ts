@@ -1,4 +1,12 @@
-import {Participant, Pool, Bidder, Orchestrator} from './entities';
+import {randomFloat} from './utils';
+import {
+  Participant,
+  Pool,
+  Bidder,
+  Orchestrator,
+  chunkReward,
+  BlockChain,
+} from './entities';
 
 // move chunks from one participant to another
 export const transact = (
@@ -10,6 +18,7 @@ export const transact = (
   buyer.funds -= owner.price * amount;
   buyer.ownedChunks += amount;
   buyer.wantedChunks -= amount;
+  buyer.updatePrice();
 
   // remove chunk from seller
   owner.funds += owner.price;
@@ -33,22 +42,21 @@ export const auction = async (
   seller: Participant,
   participants: Participant[],
 ) => {
+  const lot = {
+    sellerId: seller.id,
+    originalPrice: seller.price,
+    price: seller.price,
+  };
+
   // random set of participants who can afford to purchase
   const bidders = participants
-    .filter(
-      (participant) =>
-        participant.id !== seller.id &&
-        participant.auction.participate(seller.price),
-    )
+    .filter((participant) => participant.auction.participate(lot))
     .map((participant) => new Bidder(participant));
 
   const orchestrator = new Orchestrator();
 
   // find the winning bid
-  const winningBid = await orchestrator.auction(
-    {sellerId: seller.id, price: seller.price},
-    bidders,
-  );
+  const winningBid = await orchestrator.auction(lot, bidders);
 
   // make the sale
   if (winningBid) {
@@ -57,9 +65,12 @@ export const auction = async (
 };
 
 // simulated chunk payout
-export const chunkPayout = (receiver: Participant, chunkReward: number) =>
+export const chunkPayout = (receiver: Participant) =>
   (receiver.funds += receiver.ownedChunks * chunkReward);
 
-export const blockPayout = (...entities: Entity[]) => {
-
-}
+// actual payout of block
+export const blockPayout = (participants: Participant[]) => {
+  // chance it was earned within the pool
+  if (randomFloat(0, 1) < Pool.computeShare) {
+  }
+};
