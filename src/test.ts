@@ -15,5 +15,5 @@ const participants = generateParticipants(3);
     return auction(participant, participants);
   }, auction(participants[0], participants));
 
-  console.log(participants);
+  console.log(JSON.stringify(participants, null, 4));
 })();

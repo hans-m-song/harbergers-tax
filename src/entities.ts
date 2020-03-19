@@ -1,7 +1,6 @@
 import {EventEmitter} from 'events';
 import * as params from './parameters';
 import {random, randomFloat, round} from './utils';
-import {profit} from './formulae';
 
 export const BlockChain = {
   blockTime: params.BLOCK_INTERVAL, // block time (1 unit)
@@ -22,21 +21,66 @@ export const chunkReward = round(
 
 console.log({BlockChain, Pool, chunkReward});
 
+export enum TransactionType {
+  Purchase = 'Purchase',
+  Sale = 'Sale',
+  Reward = 'Reward',
+  Tax = 'Tax',
+  None = 'None',
+}
+
+export interface Transaction {
+  balance: number;
+  amount: number;
+  description: TransactionType;
+}
+
 export class Participant {
   id: number;
-  funds: number;
+  balance: number;
   ownedChunks: number;
   wantedChunks: number;
   price: number = 0;
   partipationChance: number;
+  history: Transaction[];
 
   constructor(id: number) {
     this.id = id;
-    this.funds = random(1, 10);
+    this.balance = random(1, 10);
     this.ownedChunks = 0;
     this.wantedChunks = random(1, 100);
     this.updatePrice();
     this.partipationChance = randomFloat(0.1, 1);
+    this.history = [
+      {amount: this.balance, balance: 0, description: TransactionType.None},
+    ];
+  }
+
+  update(chunks: number, description: TransactionType, price: number) {
+    const amount = (chunks || 1) * (price || this.price);
+
+    this.balance += amount;
+    this.ownedChunks += chunks;
+    this.wantedChunks -= chunks;
+    this.updatePrice();
+    this.history.push({amount, balance: this.balance, description});
+  }
+
+  purchase(price: number, chunks = 1) {
+    this.update(chunks, TransactionType.Purchase, -price);
+  }
+
+  sale(chunks = 1) {
+    this.update(-chunks, TransactionType.Sale, -this.price);
+  }
+
+  reward(amount: number) {
+    this.update(0, TransactionType.Reward, amount);
+  }
+
+  tax(amount: number) {
+    console.log('taxing', amount);
+    this.update(0, TransactionType.Tax, -amount);
   }
 
   updatePrice() {
@@ -44,24 +88,26 @@ export class Participant {
       chunkReward +
         randomFloat(
           chunkReward * -0.5,
-          Math.min(chunkReward * 0.5, this.funds / (this.ownedChunks || 1)),
+          Math.min(chunkReward * 0.5, this.balance / (this.ownedChunks || 1)),
         ),
     );
   }
 
-  bid({price, currentBidder, originalPrice}: Lot) {
+  bid({price, sellerId, highestBidder, originalPrice}: Lot) {
     // decide to participate in an auction depending on price
     const participating =
       randomFloat(0, 1) > this.partipationChance && // arbritrary limiter on participation
-      currentBidder !== this.id && // dont compete against yourself
-      price < this.funds && // must be able to afford
+      highestBidder !== this.id && // dont compete against yourself
+      sellerId !== this.id && // dont buy your own chunk
+      price < this.balance && // must be able to afford
       price - originalPrice < randomFloat(0.05 * price, 0.1 * price); // maxium amount before giving up (5% to 10% increase from original)
     // TODO incorporate profit consideration
 
     // amount to increase bid by 1% to 5%
     return participating
       ? round(
-          price + randomFloat(0.01 * price, Math.min(0.05 * price, this.funds)),
+          price +
+            randomFloat(0.01 * price, Math.min(0.05 * price, this.balance)),
         )
       : NaN;
   }
@@ -82,7 +128,7 @@ interface Bid {
 interface Lot {
   price: number; // current price of item
   sellerId: number; // id of seller
-  currentBidder?: number; // id of current highest bidder, eventually the buyer
+  highestBidder?: number; // id of current highest bidder, eventually the buyer
   originalPrice: number; // original price at the beginning of the auction
 }
 
@@ -128,7 +174,7 @@ export class Orchestrator extends EventEmitter {
         );
         console.log('many bids, highest bid', highestBid);
         return this.auction(
-          {...lot, price: highestBid.amount, currentBidder: highestBid.id},
+          {...lot, price: highestBid.amount, highestBidder: highestBid.id},
           bidders,
         );
       }

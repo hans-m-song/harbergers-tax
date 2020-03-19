@@ -1,4 +1,4 @@
-import {randomFloat} from './utils';
+import {randomFloat, round} from './utils';
 import {
   Participant,
   Pool,
@@ -12,30 +12,28 @@ import {
 export const transact = (
   buyer: Participant,
   owner: Participant,
-  amount = 1,
+  chunks = 1,
 ) => {
   // add chunk to buyer
-  buyer.funds -= owner.price * amount;
-  buyer.ownedChunks += amount;
-  buyer.wantedChunks -= amount;
-  buyer.updatePrice();
+  buyer.purchase(owner.price, chunks);
 
   // remove chunk from seller
-  owner.funds += owner.price;
-  owner.ownedChunks -= amount;
-  owner.wantedChunks += amount;
+  owner.sale(chunks);
 };
 
 export const taxCollection = (taxee: Participant) => {
+  if (taxee.ownedChunks < 1) return;
+  
   const taxAmount = taxee.price * Pool.tax;
   // taxee loses blocks until they can afford the tax
-  while (taxee.funds < taxAmount * taxee.ownedChunks) {
+  while (taxee.balance < taxAmount * taxee.ownedChunks) {
     taxee.ownedChunks -= 1;
     Pool.freeChunks += 1;
+    taxee.updatePrice();
   }
 
   // pay the tax
-  taxee.funds -= taxAmount * taxee.ownedChunks;
+  taxee.tax(round(taxAmount * taxee.ownedChunks));
 };
 
 export const auction = async (
@@ -66,7 +64,7 @@ export const auction = async (
 
 // simulated chunk payout
 export const chunkPayout = (receiver: Participant) =>
-  (receiver.funds += receiver.ownedChunks * chunkReward);
+  (receiver.balance += receiver.ownedChunks * chunkReward);
 
 // actual payout of block
 export const blockPayout = (participants: Participant[]) => {
