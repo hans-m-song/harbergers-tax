@@ -1,9 +1,10 @@
 import {EventEmitter} from 'events';
-import {random, randomFloat} from './utils';
+import * as params from './parameters';
+import {random, randomFloat, round} from './utils';
 import {profit} from './formulae';
 
 export const BlockChain = {
-  blockTime: 1, // block time (1 unit)
+  blockTime: params.BLOCK_INTERVAL, // block time (1 unit)
   reward: randomFloat(10.1, 10.5), // reward for mining a block
 };
 
@@ -12,13 +13,14 @@ export const Pool = {
   chunks: 100, // number of chunks of compute power
   freeChunks: 100, // amount of unowned chunks
   tax: 0.02, // percentage tax on set price
-  interval: 0.2, // trading interval
+  interval: params.TRADE_INTERVAL, // trading interval
 };
 
-export const chunkReward =
-  (BlockChain.reward * Pool.computeShare) / Pool.chunks;
+export const chunkReward = round(
+  (BlockChain.reward * Pool.computeShare) / Pool.chunks,
+);
 
-console.log({BlockChain, Pool, chunkReward})
+console.log({BlockChain, Pool, chunkReward});
 
 export class Participant {
   id: number;
@@ -26,6 +28,7 @@ export class Participant {
   ownedChunks: number;
   wantedChunks: number;
   price: number = 0;
+  partipationChance: number;
 
   constructor(id: number) {
     this.id = id;
@@ -33,33 +36,35 @@ export class Participant {
     this.ownedChunks = 0;
     this.wantedChunks = random(1, 100);
     this.updatePrice();
+    this.partipationChance = randomFloat(0.1, 1);
   }
 
   updatePrice() {
-    this.price = randomFloat(
-      0.1,
-      Math.min(0.5, this.funds / (this.ownedChunks || 1)),
+    this.price = round(
+      chunkReward +
+        randomFloat(
+          chunkReward * -0.5,
+          Math.min(chunkReward * 0.5, this.funds / (this.ownedChunks || 1)),
+        ),
     );
   }
 
-  auction = {
-    participate: ({price, currentBidder, originalPrice}: Lot) =>
-      // decide to participate in an auction depending on price
+  bid({price, currentBidder, originalPrice}: Lot) {
+    // decide to participate in an auction depending on price
+    const participating =
+      randomFloat(0, 1) > this.partipationChance && // arbritrary limiter on participation
       currentBidder !== this.id && // dont compete against yourself
       price < this.funds && // must be able to afford
-      price - originalPrice < randomFloat(0.1, 0.5) && // maxium amount before giving up
-      profit(
-        this.funds,
-        this.ownedChunks,
-        this.wantedChunks,
-        this.price,
-        chunkReward,
-        Pool.tax,
-        price,
-      ) > 0, // potential profit from buying a chunk
+      price - originalPrice < randomFloat(0.05 * price, 0.1 * price); // maxium amount before giving up (5% to 10% increase from original)
+    // TODO incorporate profit consideration
 
-    bid: () => Math.min(randomFloat(0.1, 0.5), this.funds - 0.1), // decide to bid at an auction depending on price, can't bid more than own funds
-  };
+    // amount to increase bid by 1% to 5%
+    return participating
+      ? round(
+          price + randomFloat(0.01 * price, Math.min(0.05 * price, this.funds)),
+        )
+      : NaN;
+  }
 }
 
 export const generateParticipants = (count: number): Participant[] => {
@@ -88,14 +93,12 @@ export class Orchestrator extends EventEmitter {
 
     // subscribe to valid bidders
     bidders.forEach((bidder) => {
-      if (bidder.participant.funds >= lot.price) {
-        bidPromises.push(
-          new Promise((resolve) =>
-            bidder.once('bid', (bid: Bid) => resolve(bid)),
-          ),
-        );
-        bidder.subscribe(this);
-      }
+      bidPromises.push(
+        new Promise((resolve) =>
+          bidder.once('bid', (bid: Bid) => resolve(bid)),
+        ),
+      );
+      bidder.subscribe(this);
     });
 
     // emit bid event
@@ -104,7 +107,7 @@ export class Orchestrator extends EventEmitter {
     // collect bids
     const bids = (await Promise.all(bidPromises)).filter(
       (bid) => !isNaN(bid.amount), // some bidders wont bid
-    );
+    ); // TODO check if bids are valid e.g. if bidders can afford their bids
     console.log('bids', bids);
 
     switch (bids.length) {
@@ -145,9 +148,7 @@ export class Bidder extends EventEmitter {
   private bid(lot: Lot) {
     this.emit('bid', {
       id: this.participant.id,
-      amount: this.participant.auction.participate(lot)
-        ? lot.price + this.participant.auction.bid()
-        : NaN,
+      amount: this.participant.bid(lot),
     });
   }
 

@@ -8,9 +8,12 @@ const blockInterval = setInterval(() => {
   blockPayout(participants);
 }, params.BLOCK_INTERVAL * 1000);
 
-const tradeInterval = setInterval(() => {
+const tradeInterval = setInterval(async () => {
   participants.forEach(taxCollection);
-  participants.forEach((participant) => auction(participant, participants));
+  participants.reduce(async (prevAuction, participant) => {
+    await prevAuction;
+    return auction(participant, participants);
+  }, auction(participants[0], participants));
 }, params.TRADE_INTERVAL * 1000);
 
 setTimeout(() => {

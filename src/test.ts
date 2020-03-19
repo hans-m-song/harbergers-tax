@@ -1,24 +1,19 @@
 import {profit} from './formulae';
 import {generateParticipants, Pool, chunkReward} from './entities';
+import {taxCollection, auction} from './actions';
 
 const participants = generateParticipants(3);
 
-const {funds, ownedChunks, wantedChunks, price: ownPrice} = participants[0];
-const purchasePrice = participants[1].price;
-const tax = Pool.tax;
+(async () => {
+  participants[0].ownedChunks = 1;
+  participants[2].ownedChunks = 2;
+  console.log(participants);
 
-let currentProfit;
-let reward = chunkReward;
-do {
-  reward += 50;
-  currentProfit = profit(
-    funds,
-    ownedChunks + 1,
-    wantedChunks,
-    ownPrice,
-    reward,
-    tax,
-    purchasePrice,
-  );
-  console.log(reward, currentProfit);
-} while (currentProfit <= 0);
+  participants.forEach(taxCollection);
+  await participants.reduce(async (prevAuction, participant) => {
+    await prevAuction;
+    return auction(participant, participants);
+  }, auction(participants[0], participants));
+
+  console.log(participants);
+})();

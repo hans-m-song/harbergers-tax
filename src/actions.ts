@@ -48,10 +48,10 @@ export const auction = async (
     price: seller.price,
   };
 
+  if (seller.ownedChunks < 1) return;
+
   // random set of participants who can afford to purchase
-  const bidders = participants
-    .filter((participant) => participant.auction.participate(lot))
-    .map((participant) => new Bidder(participant));
+  const bidders = participants.map((participant) => new Bidder(participant));
 
   const orchestrator = new Orchestrator();
 
