@@ -1,4 +1,4 @@
-import {Participant, Pool} from './entities';
+import {Participant, Pool, Bidder, Orchestrator} from './entities';
 
 // move chunks from one participant to another
 export const transact = (
@@ -29,26 +29,37 @@ export const taxCollection = (taxee: Participant) => {
   taxee.funds -= taxAmount * taxee.ownedChunks;
 };
 
-export const auction = (seller: Participant, participants: Participant[]) => {
+export const auction = async (
+  seller: Participant,
+  participants: Participant[],
+) => {
   // random set of participants who can afford to purchase
-  const auctionParticipants = participants.filter((participant) =>
-    participant.auction.participate(seller.price),
+  const bidders = participants
+    .filter(
+      (participant) =>
+        participant.id !== seller.id &&
+        participant.auction.participate(seller.price),
+    )
+    .map((participant) => new Bidder(participant));
+
+  const orchestrator = new Orchestrator();
+
+  // find the winning bid
+  const winningBid = await orchestrator.auction(
+    {sellerId: seller.id, price: seller.price},
+    bidders,
   );
 
-  // no participants
-  if (participants.length < 1) return;
-
-  auction(seller, auctionParticipants);
-
-  let lastBidder;
-  let price = seller.price;
-  while (true) {
-    // const bidder = random bidder
-    // increase price
-    // lastBidder = bidder;
+  // make the sale
+  if (winningBid) {
+    transact(participants[winningBid.id], seller);
   }
 };
 
 // simulated chunk payout
 export const chunkPayout = (receiver: Participant, chunkReward: number) =>
   (receiver.funds += receiver.ownedChunks * chunkReward);
+
+export const blockPayout = (...entities: Entity[]) => {
+
+}

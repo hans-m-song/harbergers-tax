@@ -1,34 +1,17 @@
-import {BlockChain, Pool, Participant} from './entities';
-import {profitBuying, profitHeld} from './formulae';
+import {BlockChain, Pool, Participant, generateParticipants} from './entities';
+import {auction, chunkPayout, taxCollection} from './actions';
+import * as params from './parameters';
 
-const chunkReward = (BlockChain.reward * Pool.computeShare) / Pool.chunks;
+const participants = generateParticipants(params.PARTICIPANT_COUNT);
 
-const decision = (participant: Participant, purchasePrice: number) => {
-  const profits = [
-    profitHeld(
-      participant.ownedChunks,
-      participant.price,
-      chunkReward,
-      Pool.tax,
-    ),
-  ];
+const blockInterval = setInterval(() => {}, params.BLOCK_INTERVAL * 1000);
 
-  for (let i = 0; i < participant.wantedChunks; i++) {
-    if (i * purchasePrice < participant.funds) break;
+const tradeInterval = setInterval(() => {
+  participants.forEach(taxCollection);
+  participants.forEach((participant) => auction(participant, participants));
+}, params.TRADE_INTERVAL * 1000);
 
-    // profit for different number of chunks
-    profits.push(
-      profitBuying(
-        participant.ownedChunks,
-        i + 1,
-        participant.price,
-        purchasePrice,
-        chunkReward,
-        Pool.tax,
-      ),
-    );
-  }
-
-  // index corresponds to number of blocks to purchase
-  return profits.indexOf(Math.max(...profits));
-};
+setTimeout(() => {
+  clearInterval(blockInterval);
+  clearInterval(tradeInterval);
+}, params.BLOCK_ROUNDS * 1000);

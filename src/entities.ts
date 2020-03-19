@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events';
 import {random, randomFloat} from './utils';
-import {transact} from './actions';
+import {profit} from './formulae';
 
 export const BlockChain = {
   blockTime: 1, // block time (1 unit)
@@ -14,6 +14,9 @@ export const Pool = {
   tax: 0.02, // percentage tax on set price
   interval: 0.2, // trading interval
 };
+
+export const chunkReward =
+  (BlockChain.reward * Pool.computeShare) / Pool.chunks;
 
 export interface Participant {
   id: number;
@@ -38,7 +41,18 @@ export class Participant implements Participant {
   }
 
   auction = {
-    participate: (price: number) => price < this.funds && random(0, 10) > 5,
+    participate: (price: number) =>
+      price < this.funds &&
+      random(0, 10) > 5 &&
+      profit(
+        this.funds,
+        this.ownedChunks,
+        this.wantedChunks,
+        this.price,
+        chunkReward,
+        Pool.tax,
+        price,
+      ) > 0,
     bid: () => randomFloat(2, 5),
     bidMax: () => randomFloat(1, 3),
   };
@@ -62,8 +76,9 @@ interface Lot {
   currentBidder?: number; // id of current highest bidder, eventually the buyer
 }
 
-class Orchestrator extends EventEmitter {
-  async auction(lot: Lot, bidders: Bidder[]): Promise<number> {
+export class Orchestrator extends EventEmitter {
+  async auction(lot: Lot, bidders: Bidder[]): Promise<Bid | null> {
+    console.log('auctioning: ', lot);
     const bidPromises: Promise<Bid>[] = [];
 
     // subscribe to valid bidders
@@ -88,13 +103,14 @@ class Orchestrator extends EventEmitter {
 
     switch (bids.length) {
       case 0:
-        return NaN; // no buyer found
+        return null; // no buyer found
 
       case 1:
-        return bids[0].id; // winning bid
+        console.log('winning bid', bids[0]);
+        return bids[0]; // winning bid
 
       default: {
-        // TODO tiebreaker
+        // TODO tiebreaker?
         const highestBid = bids.reduce(
           (highestBid, currentBid) =>
             currentBid.amount > highestBid.amount ? currentBid : highestBid,
@@ -109,7 +125,7 @@ class Orchestrator extends EventEmitter {
   }
 }
 
-class Bidder extends EventEmitter {
+export class Bidder extends EventEmitter {
   private orchestrator?: Orchestrator;
   private subscription?: ({
     price,
@@ -140,24 +156,3 @@ class Bidder extends EventEmitter {
     this.orchestrator.once('bid', this.subscription);
   }
 }
-
-(async () => {
-  const participants = generateParticipants(3);
-  const result = await participants.reduce(async (historyPromise, seller) => {
-    const history = await historyPromise;
-    // each participants chunks are offered
-    const auctionParticipants = participants
-      .filter((participant) => participant.auction.participate(seller.price))
-      .map((participant) => new Bidder(participant));
-
-    // initiate a round of auctioning
-    const result = await new Orchestrator().auction(
-      {sellerId: seller.id, price: seller.price},
-      auctionParticipants,
-    );
-    history.push(result);
-    return history;
-  }, Promise.resolve([] as number[]));
-
-  console.log(JSON.stringify(result, null, 4));
-})();
