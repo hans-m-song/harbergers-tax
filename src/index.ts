@@ -1,22 +1,19 @@
 import {generateParticipants} from './entities';
-import {actions} from './HarbergersTax';
+import {auction, taxCollection, blockPayout} from './actions';
 import * as params from './parameters';
 
 const participants = generateParticipants(params.PARTICIPANT_COUNT);
 
-const blockInterval = setInterval(() => {}, params.BLOCK_INTERVAL);
+const blockInterval = setInterval(() => {
+  blockPayout(participants);
+}, params.BLOCK_INTERVAL * 1000);
 
 const tradeInterval = setInterval(() => {
-  const {taxCollection, auction, chunkPayout} = actions(participants);
-  // TODO figure out the order
   participants.forEach(taxCollection);
-  participants.forEach(auction);
-  participants.forEach(chunkPayout);
-}, params.TRADE_INTERVAL);
+  participants.forEach((participant) => auction(participant, participants));
+}, params.TRADE_INTERVAL * 1000);
 
-const clear = () => {
-  clearInterval(tradeInterval);
+setTimeout(() => {
   clearInterval(blockInterval);
-};
-
-clear();
+  clearInterval(tradeInterval);
+}, params.BLOCK_ROUNDS * 1000);
