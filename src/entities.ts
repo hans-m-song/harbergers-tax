@@ -166,6 +166,7 @@ export class Orchestrator extends EventEmitter {
   async auction(lot: Lot, bidders: Bidder[]): Promise<Bid | null> {
     const bidPromises: Promise<Bid>[] = [];
 
+    this.setMaxListeners(bidders.length);
     // subscribe to valid bidders
     bidders.forEach((bidder) => {
       bidPromises.push(

@@ -2,7 +2,10 @@ import {generateParticipants, BlockChain, Pool, Metrics} from './entities';
 import {auction, taxCollection, blockPayout} from './actions';
 import * as params from './parameters';
 
-const participants = [Pool.participant, ...generateParticipants(4)]; //params.PARTICIPANT.COUNT);
+const participants = [
+  Pool.participant,
+  ...generateParticipants(4), //params.PARTICIPANT.COUNT),
+];
 console.log(participants);
 
 const metrics: Metrics = {
@@ -16,7 +19,9 @@ const blockInterval = setInterval(() => {
   blockPayout(BlockChain.reward, Pool.chunks, participants, metrics);
 }, params.BLOCK.INTERVAL * 1000);
 
-const tradeInterval = setInterval(async () => {
+let tradeTimeout: NodeJS.Timeout;
+
+const tradeIntervalFn = async () => {
   const start = Date.now();
 
   participants.forEach(taxCollection);
@@ -29,21 +34,30 @@ const tradeInterval = setInterval(async () => {
   const end = Date.now();
   metrics.tradeRoundTime += end - start;
   metrics.tradeRoundCount += 1;
-}, params.TRADE.INTERVAL * 1000);
+
+  tradeTimeout = setTimeout(tradeIntervalFn, params.TRADE.INTERVAL * 1000);
+};
+
+tradeIntervalFn();
 
 setTimeout(() => {
   clearInterval(blockInterval);
-  clearInterval(tradeInterval);
+  clearTimeout(tradeTimeout);
 
-  console.log(metrics);
   console.log(
     JSON.stringify(
       participants.map((participant) => {
         const {id, balance, history, ownedChunks} = participant;
-        return `${id}: balance: ${history[0].amount} -> ${balance}, chunks: ${history[0].ownedChunks} -> ${ownedChunks}`;
+        return `${id} balance: ${history[0].amount} -> ${balance} chunks: ${history[0].ownedChunks} -> ${ownedChunks}`;
       }),
       null,
       4,
     ),
+  );
+
+  console.log(metrics);
+  console.log(
+    'average trade time',
+    metrics.tradeRoundTime / metrics.tradeRoundCount,
   );
 }, params.BLOCK.ROUNDS * 1000);
