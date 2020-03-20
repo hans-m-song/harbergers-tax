@@ -2,25 +2,6 @@ import {EventEmitter} from 'events';
 import * as params from './parameters';
 import {random, randomFloat, round} from './utils';
 
-export const BlockChain = {
-  blockTime: params.BLOCK_INTERVAL, // block time (1 unit)
-  reward: randomFloat(10.1, 10.5), // reward for mining a block
-};
-
-export const Pool = {
-  computeShare: randomFloat(0.25, 0.35), // percentage of total compute power of pool (pool/global)
-  chunks: 100, // number of chunks of compute power
-  freeChunks: 100, // amount of unowned chunks
-  tax: 0.02, // percentage tax on set price
-  interval: params.TRADE_INTERVAL, // trading interval
-};
-
-export const chunkReward = round(
-  (BlockChain.reward * Pool.computeShare) / Pool.chunks,
-);
-
-console.log({BlockChain, Pool, chunkReward});
-
 export enum TransactionType {
   Purchase = 'Purchase',
   Sale = 'Sale',
@@ -29,10 +10,18 @@ export enum TransactionType {
   None = 'None',
 }
 
+export type Metrics = {
+  tradeRoundTime: number;
+  tradeRoundCount: number;
+  tradeCount: number;
+  rewardCount: number;
+};
+
 export interface Transaction {
   balance: number;
   amount: number;
   description: TransactionType;
+  ownedChunks: number;
 }
 
 export class Participant {
@@ -44,34 +33,44 @@ export class Participant {
   partipationChance: number;
   history: Transaction[];
 
-  constructor(id: number) {
+  constructor(id: number, ownedChunks = 0) {
     this.id = id;
+    this.ownedChunks = ownedChunks;
     this.balance = random(1, 10);
-    this.ownedChunks = 0;
     this.wantedChunks = random(1, 100);
     this.updatePrice();
     this.partipationChance = randomFloat(0.1, 1);
     this.history = [
-      {amount: this.balance, balance: 0, description: TransactionType.None},
+      {
+        amount: this.balance,
+        balance: 0,
+        description: TransactionType.None,
+        ownedChunks,
+      },
     ];
   }
 
   update(chunks: number, description: TransactionType, price: number) {
     const amount = (chunks || 1) * (price || this.price);
 
-    this.balance += amount;
+    this.balance = round(this.balance + amount);
     this.ownedChunks += chunks;
     this.wantedChunks -= chunks;
     this.updatePrice();
-    this.history.push({amount, balance: this.balance, description});
+    this.history.push({
+      amount,
+      balance: this.balance,
+      description,
+      ownedChunks: this.ownedChunks,
+    });
   }
 
-  purchase(price: number, chunks = 1) {
-    this.update(chunks, TransactionType.Purchase, -price);
+  purchase(price: number) {
+    this.update(1, TransactionType.Purchase, -price);
   }
 
-  sale(chunks = 1) {
-    this.update(-chunks, TransactionType.Sale, -this.price);
+  sale(amount?: number) {
+    this.update(-1, TransactionType.Sale, -(amount || this.price));
   }
 
   reward(amount: number) {
@@ -79,24 +78,23 @@ export class Participant {
   }
 
   tax(amount: number) {
-    console.log('taxing', amount);
     this.update(0, TransactionType.Tax, -amount);
   }
 
   updatePrice() {
     this.price = round(
       chunkReward +
-        randomFloat(
-          chunkReward * -0.5,
-          Math.min(chunkReward * 0.5, this.balance / (this.ownedChunks || 1)),
-        ),
+      randomFloat(
+        chunkReward * -0.1,
+        Math.min(chunkReward * 0.1, this.balance / (this.ownedChunks || 1)),
+      ),
     );
   }
 
   bid({price, sellerId, highestBidder, originalPrice}: Lot) {
     // decide to participate in an auction depending on price
     const participating =
-      randomFloat(0, 1) > this.partipationChance && // arbritrary limiter on participation
+      randomFloat(0, 1) < this.partipationChance && // arbritrary limiter on participation
       highestBidder !== this.id && // dont compete against yourself
       sellerId !== this.id && // dont buy your own chunk
       price < this.balance && // must be able to afford
@@ -113,10 +111,42 @@ export class Participant {
   }
 }
 
+class PoolParticipant extends Participant {
+  constructor(chunks: number) {
+    super(0, chunks);
+    this.balance = 0;
+    this.price = chunkReward;
+    this.partipationChance = 0;
+  }
+
+  tax(amount: number) {
+    this.update(0, TransactionType.Tax, amount); // override tax to add instead of remove
+  }
+}
+
+export const chunkReward = round(
+  (params.BLOCK.REWARD * params.POOL.COMPUTESHARE) / params.POOL.CHUNKS,
+);
+
+export const BlockChain = {
+  blockTime: params.BLOCK.INTERVAL, // block time (1 unit)
+  reward: params.BLOCK.REWARD, // reward for mining a block
+};
+
+export const Pool = {
+  computeShare: params.POOL.COMPUTESHARE, //randomFloat(0.25, 0.35), // percentage of total compute power of pool (pool/global)
+  chunks: params.POOL.CHUNKS, // number of chunks of compute power
+  tax: params.POOL.TAX, // percentage tax on set price
+  interval: params.TRADE.INTERVAL, // trading interval
+  participant: new PoolParticipant(params.POOL.CHUNKS),
+};
+
+console.log({BlockChain, Pool, chunkReward});
+
 export const generateParticipants = (count: number): Participant[] => {
   const participants = [];
   while (participants.length < count)
-    participants.push(new Participant(participants.length));
+    participants.push(new Participant(participants.length + 1));
   return participants;
 };
 
@@ -134,7 +164,6 @@ interface Lot {
 
 export class Orchestrator extends EventEmitter {
   async auction(lot: Lot, bidders: Bidder[]): Promise<Bid | null> {
-    console.log('auction', lot);
     const bidPromises: Promise<Bid>[] = [];
 
     // subscribe to valid bidders
@@ -154,15 +183,14 @@ export class Orchestrator extends EventEmitter {
     const bids = (await Promise.all(bidPromises)).filter(
       (bid) => !isNaN(bid.amount), // some bidders wont bid
     ); // TODO check if bids are valid e.g. if bidders can afford their bids
-    console.log('bids', bids);
 
     switch (bids.length) {
       case 0:
-        console.log('no buyer found');
+        console.log(`no buyer found`);
         return null; // no buyer found
 
       case 1:
-        console.log('winning bid', bids[0]);
+        console.log(`winning bid ${bids[0].id} at ${bids[0].amount}`);
         return bids[0]; // winning bid
 
       default: {
@@ -172,7 +200,6 @@ export class Orchestrator extends EventEmitter {
             currentBid.amount > highestBid.amount ? currentBid : highestBid,
           bids[0],
         );
-        console.log('many bids, highest bid', highestBid);
         return this.auction(
           {...lot, price: highestBid.amount, highestBidder: highestBid.id},
           bidders,

@@ -1,6 +1,6 @@
 import {profit} from './formulae';
 import {generateParticipants, Pool, chunkReward} from './entities';
-import {taxCollection, auction} from './actions';
+import {taxCollection, auction, blockPayout} from './actions';
 
 const participants = generateParticipants(3);
 
@@ -9,11 +9,12 @@ const participants = generateParticipants(3);
   participants[2].ownedChunks = 2;
   console.log(participants);
 
-  participants.forEach(taxCollection);
-  await participants.reduce(async (prevAuction, participant) => {
-    await prevAuction;
-    return auction(participant, participants);
-  }, auction(participants[0], participants));
+  // blockPayout(participants);
+  // participants.forEach(taxCollection);
+  // await participants.reduce(async (prevAuction, participant) => {
+  //   await prevAuction;
+  //   return auction(participant, participants);
+  // }, auction(participants[0], participants));
 
-  console.log(JSON.stringify(participants, null, 4));
+  // console.log(JSON.stringify(participants, null, 4));
 })();
