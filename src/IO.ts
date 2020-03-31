@@ -35,7 +35,7 @@ export class IO {
 
   report(...args: any[]) {
     this.history.push({...args});
-    if (this.realtime) this.write(JSON.stringify({...args}, null, 4));
+    if (this.realtime) this.write(JSON.stringify(args, null, 4));
   }
 
   log(...args: any[]) {

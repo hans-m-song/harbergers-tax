@@ -1,6 +1,9 @@
 import {generateParticipants, BlockChain, Pool, Metrics} from './entities';
 import {auction, taxCollection, blockPayout} from './actions';
 import * as params from './parameters';
+import { IO } from './IO';
+
+const io = new IO('log.json', true);
 
 const participants = [
   Pool.participant,
@@ -13,6 +16,7 @@ const metrics: Metrics = {
   tradeRoundCount: 0,
   tradeCount: 0,
   rewardCount: 0,
+  averageTradeTime: 0,
 };
 
 const blockInterval = setInterval(() => {
@@ -55,9 +59,8 @@ setTimeout(() => {
     ),
   );
 
+  metrics.averageTradeTime = metrics.tradeRoundTime / metrics.tradeRoundCount
+  io.log({metrics, participants});
+  io.close();
   console.log(metrics);
-  console.log(
-    'average trade time',
-    metrics.tradeRoundTime / metrics.tradeRoundCount,
-  );
 }, params.BLOCK.ROUNDS * 1000);

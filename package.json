@@ -6,7 +6,8 @@
   "scripts": {
     "compile": "tsc",
     "start": "node dist/index.js",
-    "test": "node dist/test.js"
+    "test": "node dist/test.js",
+    "visualize": "mkdir -p dist/visualization && browserify src/visualization/main.ts -p [ tsify ] > dist/visualization/main.js && cp src/visualization/index.html dist/visualization/index.html"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,12 @@
   "homepage": "https://github.com/hans-m-song/hargergerstax#readme",
   "devDependencies": {
     "@types/node": "^13.9.1",
+    "@types/chart.js": "^2.9.18"
+  },
+  "dependencies": {
+    "browserify": "^16.5.1",
+    "chart.js": "^2.9.3",
+    "tsify": "^4.0.1",
     "typescript": "^3.8.3"
   }
 }

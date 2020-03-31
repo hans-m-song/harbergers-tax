@@ -15,6 +15,7 @@ export type Metrics = {
   tradeRoundCount: number;
   tradeCount: number;
   rewardCount: number;
+  averageTradeTime: number;
 };
 
 export interface Transaction {
@@ -22,6 +23,7 @@ export interface Transaction {
   amount: number;
   description: TransactionType;
   ownedChunks: number;
+  timestamp: number,
 }
 
 export class Participant {
@@ -44,6 +46,7 @@ export class Participant {
       {
         amount: this.balance,
         balance: 0,
+        timestamp: Date.now(),
         description: TransactionType.None,
         ownedChunks,
       },
@@ -59,6 +62,7 @@ export class Participant {
     this.updatePrice();
     this.history.push({
       amount,
+      timestamp: Date.now(),
       balance: this.balance,
       description,
       ownedChunks: this.ownedChunks,
