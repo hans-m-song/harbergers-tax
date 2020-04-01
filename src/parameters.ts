@@ -1,13 +1,13 @@
 import {randomFloat} from './utils';
 
 export const PARTICIPANT = {
-  COUNT: 100,
+  COUNT: 50,
 };
 
 export const BLOCK = {
   INTERVAL: 1,
   REWARD: randomFloat(10.1, 10.5),
-  ROUNDS: 5,
+  ROUNDS: 100,
 };
 
 export const TRADE = {

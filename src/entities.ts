@@ -6,6 +6,7 @@ export enum TransactionType {
   Purchase = 'Purchase',
   Sale = 'Sale',
   Reward = 'Reward',
+  ChunkReward = 'ChunkReward',
   Tax = 'Tax',
   None = 'None',
 }
@@ -78,7 +79,7 @@ export class Participant {
   }
 
   reward(amount: number) {
-    this.update(0, TransactionType.Reward, amount);
+    this.update(0, TransactionType.ChunkReward, amount);
   }
 
   tax(amount: number) {
@@ -125,6 +126,10 @@ class PoolParticipant extends Participant {
 
   tax(amount: number) {
     this.update(0, TransactionType.Tax, amount); // override tax to add instead of remove
+  }
+
+  reward(amount: number) {
+    this.update(0, TransactionType.Reward, amount);
   }
 }
 

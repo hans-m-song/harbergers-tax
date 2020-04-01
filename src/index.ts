@@ -1,13 +1,13 @@
 import {generateParticipants, BlockChain, Pool, Metrics} from './entities';
-import {auction, taxCollection, blockPayout} from './actions';
+import {auction, taxCollection, chunkPayout} from './actions';
 import * as params from './parameters';
-import { IO } from './IO';
+import {IO} from './IO';
 
 const io = new IO('log.json', true);
 
 const participants = [
   Pool.participant,
-  ...generateParticipants(4), //params.PARTICIPANT.COUNT),
+  ...generateParticipants(params.PARTICIPANT.COUNT),
 ];
 console.log(participants);
 
@@ -20,7 +20,7 @@ const metrics: Metrics = {
 };
 
 const blockInterval = setInterval(() => {
-  blockPayout(BlockChain.reward, Pool.chunks, participants, metrics);
+  chunkPayout(participants, BlockChain.reward, params.POOL.CHUNKS, metrics);
 }, params.BLOCK.INTERVAL * 1000);
 
 let tradeTimeout: NodeJS.Timeout;
@@ -59,7 +59,7 @@ setTimeout(() => {
     ),
   );
 
-  metrics.averageTradeTime = metrics.tradeRoundTime / metrics.tradeRoundCount
+  metrics.averageTradeTime = metrics.tradeRoundTime / metrics.tradeRoundCount;
   io.log({metrics, participants});
   io.close();
   console.log(metrics);

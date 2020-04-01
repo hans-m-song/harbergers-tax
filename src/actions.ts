@@ -1,13 +1,5 @@
 import {randomFloat, round} from './utils';
-import {
-  Participant,
-  Pool,
-  Bidder,
-  Orchestrator,
-  chunkReward,
-  BlockChain,
-  Metrics,
-} from './entities';
+import {Participant, Pool, Bidder, Orchestrator, Metrics} from './entities';
 
 // move chunks from one participant to another
 export const transact = (
@@ -17,7 +9,11 @@ export const transact = (
   chunks = 1,
 ) => {
   const amount = bidAmount || owner.price;
-  console.log(`participant ${buyer.id} paid ${bidAmount ? bidAmount : `${chunks} x ${owner.price}`} to ${owner.id}`);
+  console.log(
+    `participant ${buyer.id} paid ${
+      bidAmount ? bidAmount : `${chunks} x ${owner.price}`
+    } to ${owner.id}`,
+  );
 
   // add chunk to buyer
   buyer.purchase(amount);
@@ -76,8 +72,26 @@ export const auction = async (
 };
 
 // simulated chunk payout
-export const chunkPayout = (receiver: Participant) =>
-  (receiver.balance += receiver.ownedChunks * chunkReward);
+export const chunkPayout = (
+  participants: Participant[],
+  reward: number,
+  chunks: number,
+  metrics?: Metrics,
+) => {
+  const chunkReward = round(reward * 0.995 / chunks); // pool takes 0.5%
+  if (randomFloat(0, 1) < Pool.computeShare) {
+    if (metrics) metrics.rewardCount += 1;
+    const [pool, ...receivers] = participants;
+
+    const leftover = receivers.reduce((reward, receiver) => {
+      const amount = receiver.ownedChunks * chunkReward;
+      receiver.reward(amount);
+      return reward - amount;
+    }, reward);
+
+    pool.reward(leftover);
+  }
+};
 
 // actual payout of block
 export const blockPayout = (
@@ -94,7 +108,7 @@ export const blockPayout = (
       sum += participant.ownedChunks / totalChunks;
       if (pick < sum) {
         if (metrics) metrics.rewardCount += 1;
-        console.log(`****** rewarded ${participant.id} ${reward} ******`)
+        console.log(`****** rewarded ${participant.id} ${reward} ******`);
         participant.reward(reward);
         break;
       }

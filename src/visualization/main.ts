@@ -1,5 +1,13 @@
-import Chart, {ChartDataSets} from 'chart.js';
-import {balances} from './analysis';
+import Chart from 'chart.js';
+import {Analysis, AnalysisDataSet} from './analysis';
+const data = require('../../log.json');
+
+const {metrics, participants} = data[0][0];
+
+const {balances, blockPurchases, rewards} = new Analysis(participants).result();
+
+console.log(participants);
+console.log({balances, blockPurchases, rewards})
 
 const root = document.querySelector('#root');
 const createCanvas = () => {
@@ -22,11 +30,12 @@ const createChart = (
   config: Chart.ChartConfiguration,
 ) => new Chart(canvas.getContext('2d')!, config);
 
-const createDataSet = (data: ChartDataSets): Chart.ChartDataSets => {
+const createDataSet = (data: AnalysisDataSet): Chart.ChartDataSets => {
   const color = randomColor();
   return {
     backgroundColor: color,
     fill: false,
+    pointRadius: 0,
     borderColor: color,
     ...data,
   };
@@ -35,9 +44,10 @@ const createDataSet = (data: ChartDataSets): Chart.ChartDataSets => {
 createChart(createCanvas(), {
   type: 'line',
   data: {
-    datasets: balances.map((balance) => createDataSet(balance)),
+    datasets: balances.datasets.map((balance) => createDataSet(balance)),
   },
   options: {
+    
     scales: {
       xAxes: [
         {
@@ -46,5 +56,23 @@ createChart(createCanvas(), {
         },
       ],
     },
+  },
+});
+
+createChart(createCanvas(), {
+  type: 'bar',
+  data: {
+    ...blockPurchases,
+    datasets: blockPurchases.datasets.map((blockPurchases) =>
+      createDataSet(blockPurchases),
+    ),
+  },
+});
+
+createChart(createCanvas(), {
+  type: 'bar',
+  data: {
+    ...rewards,
+    datasets: rewards.datasets.map((rewards) => createDataSet(rewards)),
   },
 });
