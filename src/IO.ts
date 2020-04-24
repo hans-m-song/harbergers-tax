@@ -1,6 +1,7 @@
 import fs from 'fs';
+import {EventEmitter} from 'events';
 
-export class IO {
+export class FileIO implements IO {
   destination: string;
   stream: fs.WriteStream;
   history: any[];
@@ -33,13 +34,36 @@ export class IO {
     await Promise.all(this.writeHistory);
   }
 
-  report(...args: any[]) {
+  record(...args: any[]) {
     this.history.push({...args});
     if (this.realtime) this.write(JSON.stringify(args, null, 4));
   }
 
   log(...args: any[]) {
-    console.log(...args);
-    this.report(...args);
+    console.log('FILEIO', ...args);
+    this.record(...args);
+  }
+}
+
+export class EventIO extends EventEmitter implements IO {
+  id: string;
+  history: any[];
+
+  constructor(id: string) {
+    super();
+    this.id = id;
+    this.history = [];
+  }
+
+  async close() {}
+
+  record(...args: any[]) {
+    this.history.push({...args});
+  }
+
+  log(...args: any[]) {
+    console.log('EVNTIO', ...args);
+    this.emit('log', {id: this.id, ...args});
+    this.record(this.id, ...args);
   }
 }

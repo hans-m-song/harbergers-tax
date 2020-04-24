@@ -13,7 +13,7 @@ interface JobOptions {
     interval: number;
   };
   pool: {
-    chunks: number;
+    chunks: number[];
     tax: number;
     computeShare: number;
   };
@@ -21,5 +21,6 @@ interface JobOptions {
 
 interface ParticipantOptions {
   id: number;
-  ownedChunks: number;
+  balance?: number;
+  wantedChunks?: number;
 }

@@ -1,5 +1,6 @@
-import {randomFloat, round} from './utils';
-import {Participant, Pool, Bidder, Orchestrator, Metrics} from './entities';
+import {randomFloat, round} from '../utils';
+import {Participant} from './participant';
+import {Orchestrator, Bidder} from './auction';
 
 // move chunks from one participant to another
 export const transact = (
@@ -76,11 +77,9 @@ export const chunkPayout = (
   participants: Participant[],
   reward: number,
   chunks: number,
-  metrics?: Metrics,
 ) => {
-  const chunkReward = round(reward * 0.995 / chunks); // pool takes 0.5%
+  const chunkReward = round((reward * 0.995) / chunks); // pool takes 0.5%
   if (randomFloat(0, 1) < Pool.computeShare) {
-    if (metrics) metrics.rewardCount += 1;
     const [pool, ...receivers] = participants;
 
     const leftover = receivers.reduce((reward, receiver) => {
