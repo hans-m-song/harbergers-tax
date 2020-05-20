@@ -32,13 +32,23 @@ app.all('*', (req, res, next) => {
 app.get('/update', (req, res) => {
   const id = req.query.id;
   if (id && jobQueue[id as string]) {
+    if (jobQueue[id as string].analysed) {
+      console.log(`job already analysed: "${id}`);
+      res.sendStatus(204);
+      return;
+    }
+
     console.log(`analysing job: "${id}"`);
+    if (jobQueue[id as string].complete) {
+      jobQueue[id as string].setAnalysed();
+    }
+
     const result = analyse(jobQueue[id as string]);
     res.send({result});
-  } else {
-    console.log(`job not found: "${id}"`);
-    res.sendStatus(404);
+    return;
   }
+  console.log(`job not found: "${id}"`);
+  res.sendStatus(404);
 });
 
 app.get('/new', (req, res) => {
@@ -66,10 +76,11 @@ app.get('/new', (req, res) => {
     });
     jobQueue[id as string] = job;
     job.execute();
-  } else {
-    console.log(`job missing parameters: "${id}`);
-    res.sendStatus(404);
+    return;
   }
+
+  console.log(`job missing parameters: "${id}`);
+  res.sendStatus(404);
 });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

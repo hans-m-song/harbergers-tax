@@ -97,8 +97,9 @@ export class PoolParticipant extends Participant {
     const chunkReward = options.block.reward / options.pool.computeShare / options.pool.chunks;
     super({id: 0, chunkReward});
     this.balance = 0;
-    this.price = chunkReward / 10;
+    this.price = chunkReward / 100;
     this.partipationChance = 0;
+    this.chunks = options.pool.chunks;
   }
 
   tax(amount: number) {

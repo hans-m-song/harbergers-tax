@@ -27,24 +27,33 @@ class Runner {
     if (response) {
       this.charts = createCharts(response.result);
     }
-    this.intervalId = setInterval(() => this.update(), this.interval);
+    this.update('test');
     return this;
   }
 
-  async update() {
-    const response = await updateJob({id: 'test'});
+  async update(id: string) {
+    if (!this.intervalId) {
+      this.intervalId = setInterval(() => this.update(id), this.interval);
+    }
+
+    const response = await updateJob({id});
     if (response) {
       if (!this.charts) {
         this.charts = createCharts(response.result);
       } else {
         updateCharts(this.charts, response.result);
       }
+    } else {
+      console.log('job is complete');
+      this.stop();
     }
+
     return this;
   }
 
   async stop() {
     clearInterval(this.intervalId!);
+    this.intervalId = undefined;
     return this;
   }
 

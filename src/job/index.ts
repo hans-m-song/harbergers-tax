@@ -16,11 +16,15 @@ export class Job {
   private participants: Participant[];
   private blockInterval?: NodeJS.Timeout;
   private tradeInterval?: NodeJS.Timeout;
+  complete: boolean;
+  analysed: boolean;
 
   constructor(id: string, io: IO, options: JobOptions) {
     this.io = io;
     this.id = id;
     this.options = options;
+    this.complete = false;
+    this.analysed = false;
     this.metrics = {
       tradeRoundTime: 0,
       tradeRoundCount: 0,
@@ -36,7 +40,7 @@ export class Job {
     );
     while (this.participants.length < this.options.participant.count) {
       this.participants.push(
-        new Participant({id: this.participants.length + 1, chunkReward}),
+        new Participant({id: this.participants.length, chunkReward}),
       );
     }
   }
@@ -86,6 +90,10 @@ export class Job {
     return this;
   }
 
+  setAnalysed() {
+    this.analysed = true;
+  }
+
   async stop() {
     clearInterval(this.blockInterval!);
     clearTimeout(this.tradeInterval!);
@@ -95,18 +103,19 @@ export class Job {
     this.io.log({metrics: this.metrics, participants: this.participants});
     await this.io.close();
     console.log(this.metrics);
+    this.complete = true;
   }
 }
 
 if (require.main === module) {
   const jobOptions: JobOptions = {
     participant: {
-      count: 5,
+      count: 20,
     },
     block: {
       interval: 1,
       reward: 1,
-      rounds: 10,
+      rounds: 40,
     },
     trade: {
       interval: 0.2,

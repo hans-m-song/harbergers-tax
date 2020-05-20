@@ -53,7 +53,9 @@ export class Analysis {
     const binnedRewards = this.bin(rewards, 1000);
 
     return {
-      balances: {datasets: balances},
+      balances: {
+        datasets: balances,
+      },
       blockPurchases: {
         labels: binnedBlockPurchases.labels,
         datasets: [
@@ -65,7 +67,12 @@ export class Analysis {
       },
       rewards: {
         labels: binnedRewards.labels,
-        datasets: [{label: 'rewards per block time', data: binnedRewards.data}],
+        datasets: [
+          {
+            label: 'rewards per block time',
+            data: binnedRewards.data,
+          },
+        ],
       },
     } as AnalysisResult;
   }

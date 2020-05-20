@@ -3,7 +3,10 @@ import Chart from 'chart.js';
 const root = document.querySelector('#root');
 const createCanvas = () => {
   const canvas = document.createElement('canvas');
-  root?.appendChild(canvas);
+  const container = document.createElement('div');
+  container.className = 'canvas-container';
+  container.appendChild(canvas);
+  root!.appendChild(container);
   return canvas;
 };
 
@@ -41,6 +44,12 @@ export const createCharts = (analysis: AnalysisResult) => {
       datasets: balances.datasets.map((balance) => createDataSet(balance)),
     },
     options: {
+      title: {
+        text: 'Balance of participants',
+        display: true,
+      },
+      maintainAspectRatio: false,
+      responsive: true,
       scales: {
         xAxes: [
           {
@@ -60,6 +69,14 @@ export const createCharts = (analysis: AnalysisResult) => {
         createDataSet(blockPurchases),
       ),
     },
+    options: {
+      title: {
+        text: 'Blocks purchased',
+        display: true,
+      },
+      maintainAspectRatio: false,
+      responsive: true,
+    },
   });
 
   const rewardsChart = createChart(createCanvas(), {
@@ -68,18 +85,39 @@ export const createCharts = (analysis: AnalysisResult) => {
       ...rewards,
       datasets: rewards.datasets.map((rewards) => createDataSet(rewards)),
     },
+    options: {
+      title: {
+        text: 'Rewards received',
+        display: true,
+      },
+      maintainAspectRatio: false,
+      responsive: true,
+    },
   });
 
   return {balancesChart, blockPurchasesChart, rewardsChart};
 };
 
-const updateChart = (chart: Chart, data: AnalysisData) => {};
+const updateChart = (chart: Chart, data: AnalysisData) => {
+  console.log(chart.config.data, data);
+  data.datasets.forEach((dataSet, i) => {
+    while (chart.config.data!.datasets![i].data!.length < dataSet.data.length) {
+      chart.config.data!.datasets![i].data!.push(
+        dataSet.data[chart.config.data!.datasets![i].data!.length] as number,
+      );
+    }
+  });
+  if (data.labels) {
+    chart.config.data!.labels = data.labels;
+  }
+};
 
 export const updateCharts = (
   charts: {[name: string]: Chart},
   analysis: AnalysisResult,
 ) => {
-  Object.keys(charts).forEach((name) =>
-    updateChart(charts[name], analysis[name.slice(0, name.length - 5)]),
-  );
+  Object.keys(charts).forEach((name) => {
+    updateChart(charts[name], analysis[name.slice(0, name.length - 5)]);
+    charts[name].update();
+  });
 };
