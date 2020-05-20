@@ -1,5 +1,6 @@
 import {Participant, ParticipantMap} from './participant';
 import {State} from './state';
+import {io} from './io';
 
 const roster = [
   [0, 2],
@@ -11,16 +12,13 @@ roster.forEach((initialState, i) => {
   participants[i] = new Participant(i, initialState[0], initialState[1]);
 });
 
-const stateRegistry: {[stateId: string]: State} = {}
+const stateRegistry: {[stateId: string]: State} = {};
 
-const initialState = new State('', 0, 0, [], participants, stateRegistry);
+const root = new State('', 0, 0, [], participants, stateRegistry);
 
-initialState.generateStates().visitStates();
+root.generateStates().visitStates();
 
-// console.log((JSON.stringify(stateRegistry, null, 4)))
-// console.log(JSON.stringify(initialState, null, 4));
-
-console.log('```mermaid');
-console.log('graph TD');
-console.log(initialState.toString());
-console.log('```');
+io.output('```mermaid');
+io.output('graph TD');
+io.output(root.toString());
+io.output('```');

@@ -6,9 +6,10 @@ import {
 } from './stateTransaction';
 import {purchase, reward} from './actions';
 import {Participant, ParticipantMap} from './participant';
+import {io} from './io';
 
-const MAX_DEPTH = 9;
-const DEBUG = false;
+const MAX_DEPTH = parseInt(process.env.MAX_DEPTH || '') || 5;
+const DEBUG = process.env.DEBUG || false;
 
 const deepCopyParticipants = (participants: ParticipantMap): ParticipantMap => {
   const result: ParticipantMap = {};
@@ -73,20 +74,19 @@ export class State {
     this.participants = participants;
     this.states = new Map();
     this.stateRegistry = stateRegistry;
-    if (DEBUG) {
-      console.log(
-        'NEW',
-        '\t\t\t',
-        'id',
-        this.getId(),
-        'parent',
-        parentId === '' ? 'parent' : parentId,
-        'depth',
-        depth,
-        'id',
-        id,
-      );
-    }
+    io.log(
+      'NEW',
+      'id:',
+      this.getId(),
+      'parent:',
+      parentId === '' ? 'parent' : parentId,
+      'depth:',
+      depth,
+      'id:',
+      id,
+      'exists in registry:',
+      !!this.stateRegistry[this.getId()],
+    );
   }
 
   applyStateTransactions() {
@@ -94,16 +94,12 @@ export class State {
       this.stateTransactions.length === 1 &&
       this.stateTransactions[0].type === TransactionType.REWARD
     ) {
-      if (DEBUG) {
-        console.log('APPLY', '\t\t', 'rewards');
-      }
+      io.log('APPLY', 'rewards');
       Object.values(this.participants).forEach((participant) =>
         reward(participant),
       );
     } else {
-      if (DEBUG) {
-        console.log('APPLY', '\t\t', 'purchases', this.stringifyActions());
-      }
+      io.log('APPLY', 'purchases', this.stringifyActions());
       this.stateTransactions.forEach((transaction) => {
         const {initiator, target} = transaction as PurchaseTransction;
         purchase(this.participants[initiator.id], this.participants[target.id]);
@@ -113,11 +109,9 @@ export class State {
   }
 
   generateStates() {
-    if (DEBUG) {
-      console.log('GENERATE', '\t', this.getId(), this.duplicateStateId || '');
-    }
+    io.log('GENERATE', this.getId(), this.duplicateStateId || '');
     if (this.depth > MAX_DEPTH - 2) {
-      if (DEBUG) console.log(`max depth ${MAX_DEPTH} reached`);
+      io.log('DEPTH', `max depth ${MAX_DEPTH} reached`);
       return this;
     }
 
@@ -132,9 +126,7 @@ export class State {
       ) {
         return this;
       }
-      if (DEBUG) {
-        console.log('SUBSTATES', '', 'reward node');
-      }
+      io.log('SUBSTATES', 'reward node');
       const actions: StateTransaction[] = [new RewardTransaction()];
       const state = new State(
         this.duplicateStateId || this.getId(),
@@ -149,9 +141,7 @@ export class State {
       return this;
     }
 
-    if (DEBUG) {
-      console.log('SUBSTATES', '', 'subnodes');
-    }
+    io.log('SUBSTATES', 'subnodes');
     const actions = Object.values(this.participants).reduce(
       (states, initiator) => {
         if (initiator.funds > 0) {
@@ -180,16 +170,11 @@ export class State {
           valid && participant.funds > -1 && participant.chunks > -1,
         true,
       );
-      let notDuplicate = true;
-      for (const stateId of this.states.values()) {
-        const existingState = this.stateRegistry[stateId];
-        notDuplicate = notDuplicate && !state.semiEquals(existingState);
-        if (!notDuplicate) break;
-      }
-      if (validState && notDuplicate) {
+      io.log('VALIDITY', validState);
+      if (validState) {
         const existingStateId = Object.keys(
           this.stateRegistry,
-        ).find((stateId) => this.stateRegistry[stateId].semiEquals(state, false));
+        ).find((stateId) => this.stateRegistry[stateId].semiEquals(state));
         if (existingStateId) {
           state.setDuplicate(existingStateId);
         }
@@ -201,9 +186,7 @@ export class State {
   }
 
   visitStates() {
-    if (DEBUG) {
-      console.log('VISIT', '\t\t', this.getId(), this.duplicateStateId || '');
-    }
+    io.log('VISIT', this.getId(), this.duplicateStateId || '');
     if (!this.duplicateStateId) {
       for (const stateId of this.states.values()) {
         this.stateRegistry[stateId].generateStates().visitStates();
@@ -224,15 +207,7 @@ export class State {
   }
 
   setDuplicate(stateId: string) {
-    if (DEBUG) {
-      console.log(
-        'DUPLICATE',
-        '',
-        this.getId(),
-        'set as duplicate of',
-        stateId,
-      );
-    }
+    io.log('DUPLICATE', this.getId(), 'set as duplicate of', stateId);
     this.duplicateStateId = stateId;
   }
 
@@ -278,9 +253,9 @@ export class State {
 
     if (!this.duplicateStateId) {
       declarations.push(
-        `${this.getId()}[${DEBUG ? `${this.getId()}<br>` : ''}${Object.values(
-          this.participants,
-        )
+        `${this.getId()}[${
+          DEBUG ? `${this.getId()}<br>` : ''
+        }${Object.values(this.participants)
           .map((participant) => participant.toString())
           .join('<br>')}]`,
       );
