@@ -35,7 +35,7 @@ export const taxCollection = (
   while (taxee.balance < taxAmount * taxee.chunks) {
     taxee.chunks -= 1;
     pool.chunks += 1;
-    taxee.updatePrice();
+    taxee.calculatePrice();
   }
 
   // pay the tax

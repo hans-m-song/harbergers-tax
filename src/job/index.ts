@@ -29,7 +29,7 @@ export class Job {
       averageTradeTime: 0,
     };
     this.pool = new PoolParticipant(options);
-    this.participants = [];
+    this.participants = [this.pool];
     const chunkReward = calculateChunkReward(
       this.options.block.reward * this.options.pool.computeShare,
       this.options.pool.chunks,
@@ -39,6 +39,10 @@ export class Job {
         new Participant({id: this.participants.length + 1, chunkReward}),
       );
     }
+  }
+
+  getParticipants() {
+    return this.participants;
   }
 
   async execute() {
@@ -60,7 +64,6 @@ export class Job {
       const end = Date.now();
       this.metrics.tradeRoundCount += 1;
       this.metrics.tradeRoundTime += end - start;
-      console.log(this.metrics.tradeRoundTime);
       this.tradeInterval = setTimeout(
         tradeIntervalFn,
         this.options.trade.interval * 1000,
@@ -80,13 +83,13 @@ export class Job {
     tradeIntervalFn();
 
     setTimeout(() => this.stop(), this.options.block.rounds * 1000);
+    return this;
   }
 
   async stop() {
     clearInterval(this.blockInterval!);
     clearTimeout(this.tradeInterval!);
 
-    console.log(this);
     this.metrics.averageTradeTime =
       this.metrics.tradeRoundTime / this.metrics.tradeRoundCount;
     this.io.log({metrics: this.metrics, participants: this.participants});

@@ -67,3 +67,10 @@ export class EventIO extends EventEmitter implements IO {
     this.record(this.id, ...args);
   }
 }
+
+export class DummyIO implements IO {
+  history: any[] = [];
+  async close() {};
+  record(...args: any[]) {};
+  log(...args: any[]) {};
+}

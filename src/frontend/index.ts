@@ -1,5 +1,5 @@
 import Chart from 'chart.js';
-import {update} from './request';
+import {updateJob, newJob} from './request';
 import {createCharts, updateCharts} from './charts';
 
 interface RunnerOptions {
@@ -23,15 +23,23 @@ class Runner {
   }
 
   async initialize() {
-    const {analysis} = await update({all: true});
-    this.charts = createCharts(analysis);
+    const response = await updateJob({id: 'test'});
+    if (response) {
+      this.charts = createCharts(response.result);
+    }
     this.intervalId = setInterval(() => this.update(), this.interval);
     return this;
   }
 
   async update() {
-    const {analysis, metrics} = await update({all: true});
-    updateCharts(this.charts, analysis);
+    const response = await updateJob({id: 'test'});
+    if (response) {
+      if (!this.charts) {
+        this.charts = createCharts(response.result);
+      } else {
+        updateCharts(this.charts, response.result);
+      }
+    }
     return this;
   }
 
@@ -40,13 +48,17 @@ class Runner {
     return this;
   }
 
-  newJob(options: JobOptions) {
+  async newJob(id: string, options?: JobOptions) {
+    const response = await newJob(id, options);
+    if (response) {
+      console.log(`new job received: ${id}`);
+    }
     return this;
   }
 }
 
-() => {
-  const runner = new Runner({interval: 1000});
-  console.log('runner', runner);
-  runner.initialize();
-};
+(() => {
+  const runner = new Runner({interval: 2000});
+  (window as any).runner = runner;
+  runner.newJob('test').then(() => runner.initialize());
+})();

@@ -1,3 +1,5 @@
+import {Participant} from '../job/participant';
+
 type Dict = {[name: string]: string};
 
 const optionsToQuery = (options: Dict) =>
@@ -7,15 +9,35 @@ const optionsToQuery = (options: Dict) =>
     )
     .join('&');
 
-export const update = async (options?: {
-  all?: boolean;
-}): Promise<{analysis: AnalysisResult; metrics: Metrics}> => {
-  const query = options ? `?${optionsToQuery(options as Dict)}` : '';
-  const endpoint = `/update${query}`;
+const createUrl = (endpoint: string, options: Dict) =>
+  `/${endpoint}${options ? `?${optionsToQuery(options as Dict)}` : ''}`;
 
-  const response = await fetch(endpoint);
-  const data = await response.json();
-  
-  console.log('FETCH', endpoint, response, data);
-  return data;
+const get = async (url: string): Promise<Response | null> => {
+  const response = await fetch(url);
+  if (response.status !== 200) {
+    return null;
+  }
+  return response;
+};
+
+export const updateJob = async (options?: {
+  id?: string;
+  all?: boolean;
+}): Promise<{
+  result: AnalysisResult;
+  // metrics: Metrics;
+  participants: Participant[];
+} | null> => {
+  const url = createUrl('update', options as Dict);
+  const response = await get(url);
+  return response ? response.json() : null;
+};
+
+export const newJob = async (
+  id: string,
+  options?: JobOptions,
+): Promise<boolean> => {
+  const url = createUrl('new', {id});
+  const response = await get(url);
+  return !!response;
 };

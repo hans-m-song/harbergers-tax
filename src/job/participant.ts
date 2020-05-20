@@ -16,9 +16,9 @@ export class Participant {
     this.chunks = 0;
     this.balance = balance || random(1, 10);
     this.wantedChunks = wantedChunks || random(1, 100);
-    this.updatePrice();
-    this.partipationChance = randomFloat(0.1, 1);
     this.chunkReward = chunkReward;
+    this.partipationChance = randomFloat(0.1, 1);
+    this.price = this.calculatePrice();
     this.history = [
       {
         amount: this.balance,
@@ -36,7 +36,7 @@ export class Participant {
     this.balance = round(this.balance + amount);
     this.chunks += chunks;
     this.wantedChunks -= chunks;
-    this.updatePrice();
+    this.price = this.calculatePrice();
     this.history.push({
       amount,
       timestamp: Date.now(),
@@ -62,8 +62,8 @@ export class Participant {
     this.update(0, TransactionType.Tax, -amount);
   }
 
-  updatePrice() {
-    this.price = round(
+  calculatePrice() {
+    return round(
       this.chunkReward +
         randomFloat(
           this.chunkReward * -0.1,
@@ -97,7 +97,7 @@ export class PoolParticipant extends Participant {
     const chunkReward = options.block.reward / options.pool.computeShare / options.pool.chunks;
     super({id: 0, chunkReward});
     this.balance = 0;
-    this.price = chunkReward;
+    this.price = chunkReward / 10;
     this.partipationChance = 0;
   }
 

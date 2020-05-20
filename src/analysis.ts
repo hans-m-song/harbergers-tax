@@ -94,7 +94,6 @@ export class Analysis {
   }
 
   result() {
-    console.log(this.analysis.rewards.datasets[0].data.length);
     return this.analysis;
   }
 }
