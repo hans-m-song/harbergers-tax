@@ -1,28 +1,31 @@
 import {random, randomFloat, round} from '../utils';
+import '../global';
 
 export class Participant {
   id: number;
   balance: number;
-  chunks: number[];
+  chunks: number;
   wantedChunks: number;
   price: number = 0;
   partipationChance: number;
   history: Transaction[];
+  chunkReward: number;
 
-  constructor({id}: ParticipantOptions) {
+  constructor({id, balance, wantedChunks, chunkReward}: ParticipantOptions) {
     this.id = id;
-    this.chunks = [];
-    this.balance = random(1, 10);
-    this.wantedChunks = random(1, 100);
+    this.chunks = 0;
+    this.balance = balance || random(1, 10);
+    this.wantedChunks = wantedChunks || random(1, 100);
     this.updatePrice();
     this.partipationChance = randomFloat(0.1, 1);
+    this.chunkReward = chunkReward;
     this.history = [
       {
         amount: this.balance,
         balance: 0,
         timestamp: Date.now(),
         description: TransactionType.None,
-        ownedChunks: this.chunks.length,
+        ownedChunks: this.chunks,
       },
     ];
   }
@@ -61,10 +64,10 @@ export class Participant {
 
   updatePrice() {
     this.price = round(
-      chunkReward +
+      this.chunkReward +
         randomFloat(
-          chunkReward * -0.1,
-          Math.min(chunkReward * 0.1, this.balance / (this.chunks || 1)),
+          this.chunkReward * -0.1,
+          Math.min(this.chunkReward * 0.1, this.balance / (this.chunks || 1)),
         ),
     );
   }
@@ -91,9 +94,10 @@ export class Participant {
 
 export class PoolParticipant extends Participant {
   constructor(options: JobOptions) {
-    super({id: 0});
+    const chunkReward = options.block.reward / options.pool.computeShare / options.pool.chunks;
+    super({id: 0, chunkReward});
     this.balance = 0;
-    this.price = ;
+    this.price = chunkReward;
     this.partipationChance = 0;
   }
 

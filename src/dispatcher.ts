@@ -1,13 +1,16 @@
 import {v4 as uuid} from 'uuid';
 import {Job} from './job';
+import { EventIO } from './IO';
 
 export class Dispatcher {
+  private io: IO;
   private options: DispatcherOptions;
   private jobs: {[id: string]: Job};
 
   constructor(options: DispatcherOptions) {
     this.options = options;
     this.jobs = {};
+    this.io = new EventIO('dispatcher');
   }
 
   spawn(options: JobOptions, jobId?: string) {
@@ -17,7 +20,7 @@ export class Dispatcher {
       throw new Error(`Job with ID already exists: ${jobId}`);
     }
 
-    const job = new Job(id, options);
+    const job = new Job(id, new EventIO(id), options);
     job.execute();
     this.jobs[id] = job;
   }

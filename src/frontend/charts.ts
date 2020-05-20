@@ -1,4 +1,3 @@
-import {AnalysisDataSet, AnalysisResult, AnalysisData} from '../analysis';
 import Chart from 'chart.js';
 
 const root = document.querySelector('#root');

@@ -9,3 +9,12 @@ interface Lot {
   highestBidder?: number; // id of current highest bidder, eventually the buyer
   originalPrice: number; // original price at the beginning of the auction
 }
+
+interface Transaction {
+  balance: number;
+  amount: number;
+  description: TransactionType;
+  ownedChunks: number;
+  timestamp: number;
+}
+

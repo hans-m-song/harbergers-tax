@@ -70,7 +70,7 @@ export class Analysis {
     } as AnalysisResult;
   }
 
-  bin(data: number[], width = 200) {
+  private bin(data: number[], width = 200) {
     data.sort();
     const offset = data[0] - 1;
     const last = (array: any[]) => array[array.length - 1];
