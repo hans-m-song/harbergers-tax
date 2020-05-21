@@ -49,6 +49,10 @@ export class Job {
     return this.participants;
   }
 
+  getMetrics() {
+    return this.metrics;
+  }
+
   async execute() {
     const tradeIntervalFn = async () => {
       const start = Date.now();

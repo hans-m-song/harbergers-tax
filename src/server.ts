@@ -4,6 +4,7 @@ import * as path from 'path';
 import {Analysis} from './analysis';
 import {Job} from './job';
 import {DummyIO} from './IO';
+import {merge} from './utils';
 
 // const data = require('../log.json');
 // const analysis = new Analysis(data[0][0].participants);
@@ -34,7 +35,7 @@ app.get('/update', (req, res) => {
   if (id && jobQueue[id as string]) {
     if (jobQueue[id as string].analysed) {
       console.log(`job already analysed: "${id}`);
-      res.sendStatus(204);
+      res.send({metrics: jobQueue[id as string].getMetrics()});
       return;
     }
 
@@ -51,31 +52,36 @@ app.get('/update', (req, res) => {
   res.sendStatus(404);
 });
 
-app.get('/new', (req, res) => {
+app.post('/new', (req, res) => {
   const id = req.query.id;
+  console.log('body', req.body);
   if (id) {
     console.log(`new job request received: "${id}"`);
-    res.sendStatus(200);
-    const job = new Job(id as string, new DummyIO(), {
-      participant: {
-        count: 5,
+    const jobOptions: JobOptions = merge(
+      {
+        participant: {
+          count: 5,
+        },
+        block: {
+          interval: 1,
+          reward: 1,
+          rounds: 10,
+        },
+        trade: {
+          interval: 0.2,
+        },
+        pool: {
+          chunks: 3,
+          tax: 0.05,
+          computeShare: 0.3,
+        },
       },
-      block: {
-        interval: 1,
-        reward: 1,
-        rounds: 10,
-      },
-      trade: {
-        interval: 0.2,
-      },
-      pool: {
-        chunks: 3,
-        tax: 0.05,
-        computeShare: 0.3,
-      },
-    });
+      req.body || {},
+    );
+    const job = new Job(id as string, new DummyIO(), jobOptions);
     jobQueue[id as string] = job;
     job.execute();
+    res.send({id, jobOptions});
     return;
   }
 
